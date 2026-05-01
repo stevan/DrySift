@@ -2,12 +2,14 @@
 use v5.42;
 use experimental qw[ class ];
 use Digest::MD5 ();
+use UUID        ();
 
 use Terms;
 use Values;
 
 class Allocator {
     field %allocated;
+    field %referenced;
 
     field $Nil;
     field $True;
@@ -78,11 +80,23 @@ class Allocator {
     # ... mutable stuff
 
     method Scalar ($term = $self->Nil) {
-        return Scalar->new( alloc => $self, storage => $term )
+        my $uuid = UUID::uuid();
+        $referenced{ $uuid } = Scalar->new(
+            hash    => Scalar->hash_of($uuid),
+            uuid    => $uuid,
+            alloc   => $self,
+            storage => $term
+        )
     }
 
     method Struct (%fields) {
-        return Struct->new( alloc => $self, storage => $self->Record(%fields) );
+        my $uuid = UUID::uuid();
+        $referenced{ $uuid } = Struct->new(
+            hash    => Struct->hash_of($uuid),
+            uuid    => $uuid,
+            alloc   => $self,
+            storage => $self->Record(%fields)
+        );
     }
 
     method List (@terms) {
@@ -90,7 +104,13 @@ class Allocator {
         while (@terms) {
             $list = $self->Cons( shift @terms, $list );
         }
-        return List->new( alloc => $self, storage => $list )
+        my $uuid = UUID::uuid();
+        $referenced{ $uuid } = List->new(
+            hash    => List->hash_of($uuid),
+            uuid    => $uuid,
+            alloc   => $self,
+            storage => $list
+        )
     }
 
     method Map (@pairs) {
@@ -98,15 +118,33 @@ class Allocator {
         while (@pairs) {
             $assoc = $self->Assoc( shift @pairs, $assoc );
         }
-        return Map->new( alloc => $self, storage => $assoc )
+        my $uuid = UUID::uuid();
+        $referenced{ $uuid } = Map->new(
+            hash    => Map->hash_of($uuid),
+            uuid    => $uuid,
+            alloc   => $self,
+            storage => $assoc
+        )
     }
 
     method Array (@elements) {
-        return Array->new( alloc => $self, storage => $self->Tuple(@elements) );
+        my $uuid = UUID::uuid();
+        $referenced{ $uuid } = Array->new(
+            hash    => Array->hash_of($uuid),
+            uuid    => $uuid,
+            alloc   => $self,
+            storage => $self->Tuple(@elements)
+        );
     }
 
     method Hash (%fields) {
-        return Hash->new( alloc => $self, storage => $self->Record(%fields) );
+        my $uuid = UUID::uuid();
+        $referenced{ $uuid } = Hash->new(
+            hash    => Hash->hash_of($uuid),
+            uuid    => $uuid,
+            alloc   => $self,
+            storage => $self->Record(%fields)
+        );
     }
 
 }

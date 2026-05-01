@@ -2,23 +2,19 @@
 use v5.42;
 use experimental qw[ class ];
 
-class Cell {
+class Cell :isa(Term) {
+    field $uuid    :param :reader;
     field $alloc   :param :reader;
     field $storage :param;
 
     field @history  :reader(HISTORY);
     field @watchers :reader(WATCHERS);
 
-    method UID { refaddr $self }
-
     method WATCH ($f) { push @watchers => $f }
 
-    method NOTIFY {
-        $_->($self) foreach @watchers;
-    }
+    method NOTIFY { $_->($self) foreach @watchers }
 
     method GET { $storage }
-
     method SET ($value) {
         unshift @history => $storage->hash if defined $storage;
         $storage = $value;
@@ -33,6 +29,12 @@ class Cell {
         say '# history:';
         say "#   - ", join "\n#   - " => map $alloc->lookup($_), @history;
     }
+
+    sub hash_of ($class, $uuid) {
+        Digest::MD5::md5_hex($class, $uuid)
+    }
+
+    method to_string (@) { sprintf '%s:%s -> %s' => __CLASS__, substr($self->hash, 0, 6), $storage->to_string }
 }
 
 ## Single Value
@@ -43,6 +45,8 @@ class Scalar :isa(Cell) {
         $self->SET($value);
         return $value;
     }
+
+    method is_nil { $self->GET->is_nil }
 }
 
 class Struct :isa(Cell) {

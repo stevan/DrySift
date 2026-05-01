@@ -14,6 +14,20 @@ subtest '... Struct' => sub {
         bar => $alloc->Num(20)
     );
     isa_ok($struct, 'Struct');
+
+    my $struct2 = $alloc->Struct(
+        foo => $alloc->Num(10),
+        bar => $alloc->Num(20)
+    );
+    isa_ok($struct2, 'Struct');
+
+    is($struct->GET->hash, $struct2->GET->hash, '... internally the same');
+    isnt($struct->hash, $struct2->hash, '... but unique references');
+
+    $struct2->set(foo => $alloc->Num(100));
+    isnt($struct->GET->hash, $struct2->GET->hash, '... internally no longer the same');
+
+
 };
 
 done_testing;
