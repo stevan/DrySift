@@ -46,7 +46,7 @@ subtest '... Bool/False' => sub {
 
 subtest '... Nil' => sub {
     my $nil = $alloc->Nil;
-    isa_ok($nil, 'Bool');
+    isa_ok($nil, 'Nil');
     my $nil2 = $alloc->Nil;
     is($nil->hash, $nil2->hash, '... same thing (hashed)');
     is(refaddr $nil, refaddr $nil2, '... same thing (refaddr)');

@@ -6,8 +6,8 @@ class Cell {
     field $alloc   :param :reader;
     field $storage :param;
 
-    field @history  :reader;
-    field @watchers :reader;
+    field @history  :reader(HISTORY);
+    field @watchers :reader(WATCHERS);
 
     method UID { refaddr $self }
 
