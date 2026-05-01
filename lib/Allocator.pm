@@ -23,9 +23,13 @@ class Allocator {
     ## ... snapshotting and loading
 
     method snapshot {
+        my @arena = map $_->to_json_ld, values %arena;
+        my @heap  = map $_->to_json_ld, values %heap;
         +{
-            arena => +[ map $_->to_json_ld, values %arena ],
-            heap  => +[ map $_->to_json_ld, values %heap  ],
+            '@type' => __CLASS__,
+            '@hash' => Digest::MD5::md5_hex(__CLASS__, map $_->{'@hash'}, (@arena, @heap)),
+            arena   => \@arena,
+            heap    => \@heap,
         }
     }
 

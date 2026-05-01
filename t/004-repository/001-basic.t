@@ -1,15 +1,16 @@
 #!perl
 
 use v5.42;
+use experimental qw[ class ];
 use Test::More;
 use Data::Dumper;
 
-use Allocator;
+use Repository;
 
-my $alloc = Allocator->new;
-isa_ok($alloc, 'Allocator');
+my $repo  = Repository->new;
+my $alloc = $repo->alloc;
 
-my $tree = $alloc->Cons(
+my $tree = $repo->bind('$tree' => $alloc->Cons(
     $alloc->Num(10),
     $alloc->Cons(
         $alloc->Pair($alloc->Sym('y'), $alloc->Num(20)),
@@ -28,15 +29,15 @@ my $tree = $alloc->Cons(
             $alloc->Nil
         )
     )
-);
+));
 
-my $snapshot = $alloc->snapshot;
+my $snapshot = $repo->snapshot;
 
 say Dumper $snapshot;
 
-my $alloc2 = Allocator->restore( $snapshot );
-isa_ok($alloc2, 'Allocator');
+my $repo2 = Repository->restore( $snapshot );
+isa_ok($repo2, 'Repository');
 
-ok($alloc2->lookup( $tree->hash ), '... found the hash');
+is($repo->resolve('$tree')->hash, $repo2->resolve('$tree')->hash, '... got the same in both');
 
 done_testing;

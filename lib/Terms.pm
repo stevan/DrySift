@@ -1,6 +1,7 @@
 
 use v5.42;
 use experimental qw[ class ];
+use Digest::MD5 ();
 
 class Term {
     use overload '""' => 'to_string';
