@@ -12,6 +12,8 @@ class Term {
     method is_nil { false }
 
     method to_string (@) { ... }
+
+    method to_json_ld { ... }
 }
 
 class Literal :isa(Term) {
@@ -25,6 +27,14 @@ class Literal :isa(Term) {
         sprintf '%s[%s]:%s' =>
                 __CLASS__, "${value}",
                 substr($self->hash, 0, 6)
+    }
+
+    method to_json_ld {
+        +{
+            '@type' => __CLASS__,
+            '@hash' => $self->hash,
+            'value' => $value
+        }
     }
 }
 
@@ -47,6 +57,15 @@ class Pair :isa(Term) {
                 "${first}", "${second}",
                 substr($self->hash, 0, 6)
     }
+
+    method to_json_ld {
+        +{
+            '@type'  => __CLASS__,
+            '@hash'  => $self->hash,
+            'first'  => $first->hash,
+            'second' => $second->hash,
+        }
+    }
 }
 
 class Cons :isa(Term) {
@@ -61,6 +80,15 @@ class Cons :isa(Term) {
         sprintf '( %s %s ):%s' =>
                 "${head}", "${tail}",
                 substr($self->hash, 0, 6)
+    }
+
+    method to_json_ld {
+        +{
+            '@type' => __CLASS__,
+            '@hash' => $self->hash,
+            'head'  => $head->hash,
+            'tail'  => $tail->hash,
+        }
     }
 }
 
@@ -87,6 +115,14 @@ class Tuple :isa(Term) {
         sprintf '[ %s ]:%s' =>
                 (join ', ' => map "${_}", @$elements),
                 substr($self->hash, 0, 6)
+    }
+
+    method to_json_ld {
+        +{
+            '@type'    => __CLASS__,
+            '@hash'    => $self->hash,
+            'elements' => [ map $_->hash, @$elements ]
+        }
     }
 }
 
@@ -116,5 +152,13 @@ class Record :isa(Term) {
                     sprintf '%s: %s' => $_, $fields->{$_}->to_string
                 } $self->keys),
                 substr($self->hash, 0, 6)
+    }
+
+    method to_json_ld {
+        +{
+            '@type'  => __CLASS__,
+            '@hash'  => $self->hash,
+            'fields' => +{ map { $_ => $_->hash } $self->keys }
+        }
     }
 }

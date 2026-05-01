@@ -34,7 +34,21 @@ class Cell :isa(Term) {
         Digest::MD5::md5_hex($class, $uuid)
     }
 
-    method to_string (@) { sprintf '%s:%s -> %s' => __CLASS__, substr($self->hash, 0, 6), $storage->to_string }
+    method to_string (@) {
+        sprintf '%s:%s -> %s' =>
+            __CLASS__,
+            substr($self->hash, 0, 6),
+            $storage->to_string
+    }
+
+    method to_json_ld {
+        +{
+            '@type'  => __CLASS__,
+            '@hash'  => $self->hash,
+            '@uuid'  => $uuid,
+            storage  => $storage->hash,
+        }
+    }
 }
 
 ## Single Value
