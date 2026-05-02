@@ -13,7 +13,7 @@ subtest '... Map' => sub {
         $alloc->Pair( $alloc->Sym('foo'), $alloc->Num(10) ),
         $alloc->Pair( $alloc->Sym('bar'), $alloc->Num(20) ),
         $alloc->Pair( $alloc->Sym('baz'), $alloc->Num(30) ),
-    );
+    )->deref;
     isa_ok($map, 'Map');
 };
 

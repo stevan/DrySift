@@ -2,7 +2,9 @@
 use v5.42;
 use experimental qw[ class ];
 
-class Cell :isa(Term) {
+class Cell {
+    use overload '""' => 'to_string';
+
     field $uuid    :param :reader;
     field $alloc   :param :reader;
     field $storage :param;
@@ -11,8 +13,9 @@ class Cell :isa(Term) {
     field @watchers :reader(WATCHERS);
 
     method WATCH ($f) { push @watchers => $f }
-
     method NOTIFY { $_->($self) foreach @watchers }
+
+    method REF { $alloc->Ref($self) }
 
     method GET { $storage }
     method SET ($value) {
@@ -30,10 +33,6 @@ class Cell :isa(Term) {
         say "#   - ", join "\n#   - " => map $alloc->lookup($_), @history;
     }
 
-    sub hash_of ($class, $uuid) {
-        Digest::MD5::md5_hex($class, $uuid)
-    }
-
     method to_string (@) {
         sprintf '%s:%s -> %s' =>
             __CLASS__,
@@ -44,7 +43,6 @@ class Cell :isa(Term) {
     method to_json_ld {
         +{
             '@type'  => __CLASS__,
-            '@hash'  => $self->hash,
             '@uuid'  => $uuid,
             storage  => $storage->hash,
         }

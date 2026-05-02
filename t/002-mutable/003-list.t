@@ -9,7 +9,7 @@ my $alloc = Allocator->new;
 isa_ok($alloc, 'Allocator');
 
 subtest '... List' => sub {
-    my $list = $alloc->List( $alloc->Num(10), $alloc->Num(20), $alloc->Num(30) );
+    my $list = $alloc->List( $alloc->Num(10), $alloc->Num(20), $alloc->Num(30) )->deref;
     isa_ok($list, 'List');
 };
 

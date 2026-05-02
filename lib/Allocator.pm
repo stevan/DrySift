@@ -18,6 +18,7 @@ class Allocator {
     ## -------------------------------------------------------------------------
 
     method lookup ($hash) { $arena{ $hash } }
+    method deref  ($uuid) {  $heap{ $uuid } }
 
     ## -------------------------------------------------------------------------
     ## ... snapshotting and loading
@@ -27,7 +28,7 @@ class Allocator {
         my @heap  = map $_->to_json_ld, values %heap;
         +{
             '@type' => __CLASS__,
-            '@hash' => Digest::MD5::md5_hex(__CLASS__, map $_->{'@hash'}, (@arena, @heap)),
+            '@hash' => Digest::MD5::md5_hex(__CLASS__, (map $_->{'@hash'}, @arena), (map $_->{'@uuid'}, @heap)),
             arena   => \@arena,
             heap    => \@heap,
         }
@@ -35,13 +36,36 @@ class Allocator {
 
     sub restore ($class, $snapshot) {
         my @arena = $snapshot->{arena}->@*;
-        my %index = map { $_->{'@hash'}, $_ } @arena;
+        my @heap  = $snapshot->{heap}->@*;
+
+        my %arena_index = map { $_->{'@hash'}, $_ } @arena;
+        my %heap_index  = map { $_->{'@uuid'}, $_ } @heap;
+
         my $self = $class->new;
-        $self->restore_term($_, \%index) foreach @arena;
+        $self->restore_terms($_, \%arena_index, \%heap_index) foreach @arena;
         return $self;
     }
 
-    method restore_term ($term, $index) {
+    method restore_cells ($uuid, $arena_index, $heap_index) {
+        my $cell = $heap_index->{ $uuid }
+                // die "Unable to find cell(${uuid}) in the heap";
+
+        my $term = $arena_index->{ $cell->{storage} }
+                // die "Unable to find term(".$cell->{storage}.") in arena";
+
+        my $storage = $self->restore_terms($term, $arena_index, $heap_index);
+
+        given ($cell->{'@type'}) {
+            when ('Scalar') { $heap{ $uuid } = Scalar ->new(alloc => $self, uuid => $uuid, storage => $storage) }
+            when ('Struct') { $heap{ $uuid } = Struct ->new(alloc => $self, uuid => $uuid, storage => $storage) }
+            when ('List')   { $heap{ $uuid } = List   ->new(alloc => $self, uuid => $uuid, storage => $storage) }
+            when ('Map')    { $heap{ $uuid } = Map    ->new(alloc => $self, uuid => $uuid, storage => $storage) }
+            when ('Array')  { $heap{ $uuid } = Array  ->new(alloc => $self, uuid => $uuid, storage => $storage) }
+            when ('Hash')   { $heap{ $uuid } = Hash   ->new(alloc => $self, uuid => $uuid, storage => $storage) }
+        }
+    }
+
+    method restore_terms ($term, $arena_index, $heap_index) {
         given ($term->{'@type'}) {
             when ('Nil')  { $self->Nil }
             when ('Num')  { $self->Num($term->{value}) }
@@ -50,28 +74,38 @@ class Allocator {
             when ('Bool') {
                 $term->{value} eq '#T' ? $self->True : $self->False
             }
+            when ('Ref') {
+                $self->Ref( $self->restore_cells( $term->{uuid}, $arena_index, $heap_index ) );
+            }
             when ('Pair') {
                 $self->Pair(
-                    $self->lookup( $term->{first}  ) // $self->restore_term( $index->{ $term->{first}  }, $index ),
-                    $self->lookup( $term->{second} ) // $self->restore_term( $index->{ $term->{second} }, $index ),
+                    $self->lookup( $term->{first}  )
+                        // $self->restore_terms( $arena_index->{ $term->{first}  }, $arena_index, $heap_index ),
+                    $self->lookup( $term->{second} )
+                        // $self->restore_terms( $arena_index->{ $term->{second} }, $arena_index, $heap_index ),
                 );
             }
             when ('Cons') {
                 $self->Cons(
-                    $self->lookup( $term->{head} ) // $self->restore_term( $index->{ $term->{head} }, $index ),
-                    $self->lookup( $term->{tail} ) // $self->restore_term( $index->{ $term->{tail} }, $index ),
+                    $self->lookup( $term->{head} )
+                        // $self->restore_terms( $arena_index->{ $term->{head} }, $arena_index, $heap_index ),
+                    $self->lookup( $term->{tail} )
+                        // $self->restore_terms( $arena_index->{ $term->{tail} }, $arena_index, $heap_index ),
                 );
             }
             when ('Assoc') {
                 $self->Assoc(
-                    $self->lookup( $term->{head} ) // $self->restore_term( $index->{ $term->{head} }, $index ),
-                    $self->lookup( $term->{tail} ) // $self->restore_term( $index->{ $term->{tail} }, $index ),
+                    $self->lookup( $term->{head} )
+                        // $self->restore_terms( $arena_index->{ $term->{head} }, $arena_index, $heap_index ),
+                    $self->lookup( $term->{tail} )
+                        // $self->restore_terms( $arena_index->{ $term->{tail} }, $arena_index, $heap_index ),
                 );
             }
             when ('Tuple') {
                 $self->Tuple(
                     map {
-                        $self->lookup( $_ ) // $self->restore_term( $index->{ $_ }, $index ),
+                        $self->lookup( $_ )
+                            // $self->restore_terms( $arena_index->{ $_ }, $arena_index, $heap_index ),
                     } $term->{elements}->@*
                 );
             }
@@ -79,7 +113,7 @@ class Allocator {
                 $self->Record(
                     map {
                         $_ => $self->lookup( $term->{fields}->{$_} )
-                        // $self->restore_term( $index->{ $term->{fields}->{$_} }, $index ),
+                        // $self->restore_terms( $arena_index->{ $term->{fields}->{$_} }, $arena_index, $heap_index ),
                     } keys $term->{fields}->%*
                 );
             }
@@ -152,80 +186,109 @@ class Allocator {
     }
 
     ## -------------------------------------------------------------------------
+
+    method Ref ($cell) {
+        my $hash = Ref->hash_of($cell);
+        $arena{ $hash } //= Ref->new(cell => $cell, hash => $hash)
+    }
+
+    ## -------------------------------------------------------------------------
     # ... mutable stuff
 
     method Scalar ($term = $self->Nil) {
         my $uuid = UUID::uuid();
-        $heap{ $uuid } = Scalar->new(
-            hash    => Scalar->hash_of($uuid),
+        return $self->Ref( $heap{ $uuid } = Scalar->new(
             uuid    => $uuid,
             alloc   => $self,
             storage => $term
-        )
+        ))
     }
 
-    method Struct (%fields) {
+    method Struct (@args) {
+        my $storage;
+        if (scalar @args == 1 && blessed $args[0]) {
+            $storage = $args[0];
+        } else {
+            $storage = $self->Record(@args);
+        }
         my $uuid = UUID::uuid();
-        $heap{ $uuid } = Struct->new(
-            hash    => Struct->hash_of($uuid),
+        return $self->Ref( $heap{ $uuid } = Struct->new(
             uuid    => $uuid,
             alloc   => $self,
-            storage => $self->Record(%fields)
-        );
+            storage => $storage
+        ))
     }
 
     ## -------------------------------------------------------------------------
     ## ... append only
 
-    method List (@terms) {
-        my $list = $self->Nil;
-        while (@terms) {
-            $list = $self->Cons( shift @terms, $list );
+    method List (@args) {
+        my $storage;
+        if (scalar @args == 1 && blessed $args[0]) {
+            $storage = $args[0];
+        } else {
+            my $storage = $self->Nil;
+            while (@args) {
+                $storage = $self->Cons( shift @args, $storage );
+            }
         }
         my $uuid = UUID::uuid();
-        $heap{ $uuid } = List->new(
-            hash    => List->hash_of($uuid),
+        return $self->Ref( $heap{ $uuid } = List->new(
             uuid    => $uuid,
             alloc   => $self,
-            storage => $list
-        )
+            storage => $storage
+        ))
     }
 
-    method Map (@pairs) {
-        my $assoc = $self->Nil;
-        while (@pairs) {
-            $assoc = $self->Assoc( shift @pairs, $assoc );
+    method Map (@args) {
+        my $storage;
+        if (scalar @args == 1 && blessed $args[0]) {
+            $storage = $args[0];
+        } else {
+            my $storage = $self->Nil;
+            while (@args) {
+                $storage = $self->Assoc( shift @args, $storage );
+            }
         }
         my $uuid = UUID::uuid();
-        $heap{ $uuid } = Map->new(
-            hash    => Map->hash_of($uuid),
+        return $self->Ref( $heap{ $uuid } = Map->new(
             uuid    => $uuid,
             alloc   => $self,
-            storage => $assoc
-        )
+            storage => $storage
+        ))
     }
 
     ## -------------------------------------------------------------------------
     ## ... random access
 
-    method Array (@elements) {
+    method Array (@args) {
+        my $storage;
+        if (scalar @args == 1 && blessed $args[0]) {
+            $storage = $args[0];
+        } else {
+            $storage = $self->Tuple(@args);
+        }
         my $uuid = UUID::uuid();
-        $heap{ $uuid } = Array->new(
-            hash    => Array->hash_of($uuid),
+        return $self->Ref( $heap{ $uuid } = Array->new(
             uuid    => $uuid,
             alloc   => $self,
-            storage => $self->Tuple(@elements)
-        );
+            storage => $storage
+        ))
     }
 
-    method Hash (%fields) {
+    method Hash (@args) {
+        my $storage;
+        if (scalar @args == 1 && blessed $args[0]) {
+            $storage = $args[0];
+        } else {
+            $storage = $self->Record(@args);
+        }
         my $uuid = UUID::uuid();
-        $heap{ $uuid } = Hash->new(
-            hash    => Hash->hash_of($uuid),
+        return $self->Ref( $heap{ $uuid } = Hash->new(
             uuid    => $uuid,
             alloc   => $self,
-            storage => $self->Record(%fields)
-        );
+            storage => $storage
+        ))
     }
 
 }

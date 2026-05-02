@@ -9,9 +9,14 @@ my $alloc = Allocator->new;
 isa_ok($alloc, 'Allocator');
 
 subtest '... Scalar' => sub {
-    my $scalar = $alloc->Scalar( $alloc->Num(10) );
+    my $ref = $alloc->Scalar( $alloc->Num(10) );
+    isa_ok($ref, 'Ref');
+
+    my $scalar = $ref->deref;
     isa_ok($scalar, 'Scalar');
     isa_ok($scalar->get, 'Num');
+
+    is($ref->hash, $scalar->REF->hash, '... got the same reference');
 
     is($scalar->get->hash, $alloc->Num(10)->hash, '... same thing');
 

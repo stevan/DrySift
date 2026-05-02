@@ -29,14 +29,26 @@ my $tree = $alloc->Cons(
         )
     )
 );
+isa_ok($tree, 'Cons');
+
+my $ref = $alloc->Scalar( $alloc->Num(10) );
+isa_ok($ref, 'Ref');
+
+my $scalar = $ref->deref;
+isa_ok($scalar, 'Scalar');
 
 my $snapshot = $alloc->snapshot;
-
-say Dumper $snapshot;
 
 my $alloc2 = Allocator->restore( $snapshot );
 isa_ok($alloc2, 'Allocator');
 
-ok($alloc2->lookup( $tree->hash ), '... found the hash');
+ok($alloc2->lookup( $tree->hash ), '... found the tree hash');
+ok($alloc2->lookup( $ref->hash ), '... found the ref hash');
+
+my $scalar2 = $alloc2->deref( $ref->uuid );
+ok(defined $scalar2, '... found the Scalar uuid');
+is($scalar2->uuid, $scalar->uuid, '... UUIDS match');
+
+isnt(refaddr $scalar2, refaddr $scalar, '... different instances match');
 
 done_testing;

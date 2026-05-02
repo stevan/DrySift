@@ -45,6 +45,32 @@ class Str  :isa(Literal) {}
 class Bool :isa(Literal) {}
 class Sym  :isa(Literal) {}
 
+class Ref :isa(Term) {
+    field $cell :param :reader;
+
+    sub hash_of ($class, $cell) {
+        Digest::MD5::md5_hex($class, $cell->uuid)
+    }
+
+    method deref { $cell }
+    method uuid  { $cell->uuid }
+
+    method to_string {
+        sprintf '%s \#%s:%s' =>
+                __CLASS__,
+                $cell->uuid,
+                substr($self->hash, 0, 6)
+    }
+
+    method to_json_ld {
+        +{
+            '@type'  => __CLASS__,
+            '@hash'  => $self->hash,
+            uuid     => $cell->uuid,
+        }
+    }
+}
+
 class Pair :isa(Term) {
     field $first  :param :reader;
     field $second :param :reader;

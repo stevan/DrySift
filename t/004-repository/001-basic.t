@@ -31,13 +31,19 @@ my $tree = $repo->bind('$tree' => $alloc->Cons(
     )
 ));
 
+my $scalar = $repo->bind('$scalar' => $alloc->Scalar( $alloc->Num(10) ) );
+isa_ok($scalar, 'Ref');
+isa_ok($scalar->deref, 'Scalar');
+isa_ok($scalar->deref->GET, 'Num');
+
 my $snapshot = $repo->snapshot;
 
-say Dumper $snapshot;
+#say Dumper $snapshot;
 
 my $repo2 = Repository->restore( $snapshot );
 isa_ok($repo2, 'Repository');
 
-is($repo->resolve('$tree')->hash, $repo2->resolve('$tree')->hash, '... got the same in both');
+is($repo->resolve('$tree')->hash, $repo2->resolve('$tree')->hash, '... got the same $tree in both');
+is($repo->resolve('$scalar')->hash, $repo2->resolve('$scalar')->hash, '... got the same $scalar in both');
 
 done_testing;

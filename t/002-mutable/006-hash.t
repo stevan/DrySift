@@ -13,7 +13,7 @@ subtest '... Hash' => sub {
         foo => $alloc->Num(10),
         bar => $alloc->Num(20),
         baz => $alloc->Num(30),
-    );
+    )->deref;
     isa_ok($hash, 'Hash');
 };
 
