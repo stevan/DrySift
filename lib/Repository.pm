@@ -6,14 +6,17 @@ use Digest::MD5 ();
 use Terms;
 use Values;
 use Allocator;
+use Machine;
 
 class Repository {
-    field $alloc :reader :param(restore_alloc) = undef;
-    field $head  :reader :param(restore_head)  = undef;
+    field $alloc   :reader :param(restore_alloc)   = undef;
+    field $machine :reader :param(restore_machine) = undef;
+    field $head    :reader :param(restore_head)    = undef;
 
     ADJUST {
-        $alloc //= Allocator->new;
-        $head  //= +{};
+        $alloc   //= Allocator->new;
+        $machine //= Machine->new;
+        $head    //= +{};
     }
 
     method bind ($name, $value) {

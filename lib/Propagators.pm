@@ -4,21 +4,24 @@ use experimental qw[ class switch ];
 
 class Propagator {
     field $action :param :reader;
-
     method fire (@args) { $action->(@args) }
-
-    method connect { ... }
 }
 
 class UnaryPropagator :isa(Propagator) {
     field $input  :param :reader;
     field $output :param :reader;
 
-    method connect {
+    method connect ($machine) {
         $input->deref->WATCH(sub ($cell) {
-            my $term = $cell->GET;
-            $output->deref->SET( $self->fire( $term ) );
-        });
+            $machine->enqueue(
+                Kontinue::TICK->new(
+                    topic  => $cell,
+                    action => sub ($c) {
+                        $output->deref->SET( $self->fire( $c->GET ) );
+                    }
+                )
+            )
+        })
     }
 }
 
@@ -27,15 +30,31 @@ class BinaryPropagator :isa(Propagator) {
     field $rhs    :param :reader;
     field $output :param :reader;
 
-    method connect {
+    method connect ($machine) {
         $lhs->deref->WATCH(sub ($lhs_cell) {
             my $rhs_cell = $rhs->deref;
-            $output->deref->SET( $self->fire( $lhs_cell->GET, $rhs_cell->GET ) );
+            $machine->enqueue(
+                Kontinue::TICK->new(
+                    topic  => [ $lhs_cell, $rhs_cell ],
+                    action => sub ($args) {
+                        my ($n, $m) = @$args;
+                        $output->deref->SET( $self->fire( $n->GET, $m->GET ) );
+                    }
+                )
+            )
         });
 
         $rhs->deref->WATCH(sub ($rhs_cell) {
             my $lhs_cell = $lhs->deref;
-            $output->deref->SET( $self->fire( $lhs_cell->GET, $rhs_cell->GET ) );
+            $machine->enqueue(
+                Kontinue::TICK->new(
+                    topic  => [ $lhs_cell, $rhs_cell ],
+                    action => sub ($args) {
+                        my ($n, $m) = @$args;
+                        $output->deref->SET( $self->fire( $n->GET, $m->GET ) );
+                    }
+                )
+            )
         });
     }
 }
