@@ -11,12 +11,11 @@ my $repo    = Repository->new;
 my $alloc   = $repo->alloc;
 my $machine = $repo->machine;
 
-my $F = $alloc->Scalar( $alloc->Num(0) )->deref;
-my $C = $alloc->Scalar( $alloc->Num(0) )->deref;
+my $F = $alloc->Scalar( $alloc->Nil )->deref;
+my $C = $alloc->Scalar( $alloc->Nil )->deref;
 
-my $_f_32 = $alloc->Scalar( $alloc->Num(0) )->deref;
-my $_c_9  = $alloc->Scalar( $alloc->Num(0) )->deref;
-my $_c_5  = $alloc->Scalar( $alloc->Num(0) )->deref;
+my $_f_32 = $alloc->Scalar( $alloc->Nil )->deref;
+my $_c_9  = $alloc->Scalar( $alloc->Nil )->deref;
 
 my %stats;
 
@@ -71,11 +70,11 @@ $machine->connect_unary(
         say "HO $n + 32";
         $alloc->Num( $n->value / 5 )
     },
-    $_c_5
+    $_f_32
 );
 
 $machine->connect_unary(
-    $_c_5,
+    $_f_32,
     sub ($n) {
         $stats{'C * 9 / 5 + 32'}++;
         say "HO $n / 5";
@@ -91,7 +90,6 @@ $machine->execute;
 say ">>> F        : ", $F->GET;
 say ">>> (f - 32) : ", $_f_32->GET;
 say ">>> (c * 9)  : ", $_c_9->GET;
-say ">>> (c * 5)  : ", $_c_5->GET;
 say ">>> C        : ", $C->GET;
 
 is($C->GET->value, 100, '... got the right C');
@@ -102,7 +100,6 @@ $machine->execute;
 say ">>> F        : ", $F->GET;
 say ">>> (f - 32) : ", $_f_32->GET;
 say ">>> (c * 9)  : ", $_c_9->GET;
-say ">>> (c * 5)  : ", $_c_5->GET;
 say ">>> C        : ", $C->GET;
 
 is($F->GET->value, 32, '... got the right F');
@@ -114,7 +111,6 @@ $machine->execute;
 say ">>> F        : ", $F->GET;
 say ">>> (f - 32) : ", $_f_32->GET;
 say ">>> (c * 9)  : ", $_c_9->GET;
-say ">>> (c * 5)  : ", $_c_5->GET;
 say ">>> C        : ", $C->GET;
 
 is($C->GET->value, 25, '... got the right C');
@@ -122,9 +118,11 @@ is($C->GET->value, 25, '... got the right C');
 $C->SET( $alloc->Num(25) );
 $machine->execute;
 
-#diag 'STATS: ', Dumper \%stats;
-#diag 'F: ', join ', '  => $F->HISTORY;
-#diag 'C: ', join ', '  => $C->HISTORY;
+diag 'STATS: ', Dumper \%stats;
+diag 'F        : ', join ', ' => $F->HISTORY;
+diag '(f - 32) : ', join ', ' => $_f_32->HISTORY;
+diag '(c * 9)  : ', join ', ' => $_c_9->HISTORY;
+diag 'C        : ', join ', ' => $C->HISTORY;
 
 done_testing;
 

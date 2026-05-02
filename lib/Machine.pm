@@ -35,9 +35,6 @@ class Machine {
 
     method connect_unary ($input, $action, $output) {
         $input->WATCH(sub ($c) {
-            state $last;
-            return if defined $last && $last eq $c->storage->hash;
-            $last = $c->storage->hash;
             # push it ...
             unshift @$queue => Opcode::UNOP->new(
                 input  => $c->GET,
@@ -53,9 +50,6 @@ class Machine {
 
         $lhs->WATCH(sub ($c) {
             say "BINOP LHS $c";
-            state $last;
-            return if defined $last && $last eq $c->storage->hash;
-            $last = $c->storage->hash;
 
             # if we have one already ... see if it is different?
             return if defined $_lhs && $_lhs->hash eq $c->storage->hash;
@@ -82,10 +76,6 @@ class Machine {
         $rhs->WATCH(sub ($c) {
             say "BINOP RHS $c";
 
-            state $last;
-            return if defined $last && $last eq $c->storage->hash;
-            $last = $c->storage->hash;
-
             # if we have one already ... see if it is different?
             return if defined $_rhs && $_rhs->hash eq $c->storage->hash;
             # update the _rhs
@@ -109,8 +99,8 @@ class Machine {
         });
     }
 
-    method execute {
-        while (@$queue) {
+    method execute ($max_iterations = 100) {
+        while ($max_iterations-- > 0 && @$queue) {
             my $work = pop @$queue;
             given (blessed $work) {
                 when ('Opcode::ERROR') {

@@ -11,9 +11,9 @@ my $repo    = Repository->new;
 my $alloc   = $repo->alloc;
 my $machine = $repo->machine;
 
-my $upper  = $alloc->Scalar( $alloc->Str("") )->deref;
-my $lower  = $alloc->Scalar( $alloc->Str("") )->deref;
-my $output = $alloc->Scalar( $alloc->Str("") )->deref;
+my $upper  = $alloc->Scalar( $alloc->Nil )->deref;
+my $lower  = $alloc->Scalar( $alloc->Nil )->deref;
+my $output = $alloc->Scalar( $alloc->Nil )->deref;
 
 my %stats;
 
