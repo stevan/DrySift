@@ -17,10 +17,13 @@ my $upper  = $alloc->Scalar( $alloc->Str("") );
 my $lower  = $alloc->Scalar( $alloc->Str("") );
 my $output = $alloc->Scalar( $alloc->Str("") );
 
+my %stats;
+
 my $toLower = UnaryPropagator->new(
     input  => $upper,
     output => $lower,
     action => sub ($str) {
+        $stats{toLower}++;
         $alloc->Str( lc $str->value )
     }
 );
@@ -29,6 +32,7 @@ my $toUpper = UnaryPropagator->new(
     input  => $lower,
     output => $upper,
     action => sub ($str) {
+        $stats{toUpper}++;
         $alloc->Str( uc $str->value )
     }
 );
@@ -38,33 +42,10 @@ my $concat = BinaryPropagator->new(
     rhs    => $lower,
     output => $output,
     action => sub ($n, $m) {
+        $stats{concat}++;
         $alloc->Str( $n->value . $m->value )
     }
 );
-
-my $ran = 0;
-
-$lower->deref->WATCH(sub ($cell) {
-    state $times = 0;
-    if ($times == 0) {
-        is($cell->GET->value, 'hello', '... toLower fired, got the expected value');
-    } elsif ($times == 1) {
-        is($cell->GET->value, 'goodbye', '... toLower fired, got the expected value');
-    }
-    $times++;
-    $ran++;
-});
-
-$output->deref->WATCH(sub ($cell) {
-    state $times = 0;
-    if ($times == 0) {
-        is($cell->GET->value, 'HELLOhello', '... concat fired, got the expected value');
-    } elsif ($times == 1) {
-        is($cell->GET->value, 'GOODBYEgoodbye', '... concat fired, got the expected value');
-    }
-    $times++;
-    $ran++;
-});
 
 $toLower->connect($machine);
 $toUpper->connect($machine);
@@ -73,15 +54,18 @@ $concat->connect($machine);
 $upper->deref->SET( $alloc->Str("HELLO") );
 $machine->run;
 
-$upper->deref->WATCH(sub ($cell) {
-    is($cell->GET->value, 'GOODBYE', '... toUpper fired, got the expected value');
-    $ran++;
-});
+is($lower->deref->GET->value, 'hello', '... got the expected lower value');
+is($upper->deref->GET->value, 'HELLO', '... got the expected upper value');
+is($output->deref->GET->value, 'HELLOhello', '... got the expected concat value');
 
 $lower->deref->SET( $alloc->Str("goodbye") );
 $machine->run;
 
-is($ran, 5, '... the expected number of triggers happened');
+is($lower->deref->GET->value, 'goodbye', '... got the expected lower value');
+is($upper->deref->GET->value, 'GOODBYE', '... got the expected upper value');
+is($output->deref->GET->value, 'GOODBYEgoodbye', '... got the expected concat value');
+
+diag Dumper \%stats;
 
 done_testing;
 

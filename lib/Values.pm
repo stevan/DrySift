@@ -37,7 +37,7 @@ class Cell {
     method to_string (@) {
         sprintf '%s:%s -> %s' =>
             __CLASS__,
-            substr($self->hash, 0, 6),
+            $uuid,
             $storage->to_string
     }
 

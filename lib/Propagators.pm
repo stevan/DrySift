@@ -15,9 +15,9 @@ class UnaryPropagator :isa(Propagator) {
         $input->deref->WATCH(sub ($cell) {
             $machine->enqueue(
                 Kontinue::TICK->new(
-                    topic  => $cell,
-                    action => sub ($c) {
-                        $output->deref->SET( $self->fire( $c->GET ) );
+                    topic  => [ $cell ],
+                    action => sub ($n) {
+                        $output->deref->SET( $self->fire( $n->GET ) );
                     }
                 )
             )
@@ -36,8 +36,7 @@ class BinaryPropagator :isa(Propagator) {
             $machine->enqueue(
                 Kontinue::TICK->new(
                     topic  => [ $lhs_cell, $rhs_cell ],
-                    action => sub ($args) {
-                        my ($n, $m) = @$args;
+                    action => sub ($n, $m) {
                         $output->deref->SET( $self->fire( $n->GET, $m->GET ) );
                     }
                 )
@@ -49,8 +48,7 @@ class BinaryPropagator :isa(Propagator) {
             $machine->enqueue(
                 Kontinue::TICK->new(
                     topic  => [ $lhs_cell, $rhs_cell ],
-                    action => sub ($args) {
-                        my ($n, $m) = @$args;
+                    action => sub ($n, $m) {
                         $output->deref->SET( $self->fire( $n->GET, $m->GET ) );
                     }
                 )

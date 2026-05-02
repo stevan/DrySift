@@ -33,7 +33,7 @@ class Machine {
 
     method execute {
         while (@$queue) {
-            my $work = pop @$queue;;
+            my $work = pop @$queue;
             given (blessed $work) {
                 when ('Kontinue::ERROR') {
                     die $work->to_string;
@@ -43,7 +43,8 @@ class Machine {
                 }
                 when ('Kontinue::TICK') {
                     try {
-                        $work->action->( $work->topic );
+                        say "Calling $work with ".join ', ' => $work->topic->@*;
+                        $work->action->( $work->topic->@* );
                     } catch ($e) {
                         push @$queue => Kontinue::ERROR->new( error => $e );
                     }
@@ -52,7 +53,6 @@ class Machine {
                     push @$queue => Kontinue::ERROR->new( error => "Unknown Kontinue (${work})" );
                 }
             }
-
         }
     }
 }
