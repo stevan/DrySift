@@ -19,6 +19,7 @@ class Cell {
 
     method GET { $storage }
     method SET ($value) {
+        return if $value->hash eq $storage->hash;
         unshift @history => $storage->hash;
         $storage = $value;
         $self->NOTIFY;

@@ -52,6 +52,7 @@ class Machine {
         my $_rhs;
 
         $lhs->WATCH(sub ($c) {
+            say "BINOP LHS $c";
             state $last;
             return if defined $last && $last eq $c->storage->hash;
             $last = $c->storage->hash;
@@ -60,6 +61,7 @@ class Machine {
             return if defined $_lhs && $_lhs->hash eq $c->storage->hash;
             # update the _lhs
             $_lhs = $c->GET;
+            say "BINOP LHS UPDATE";
 
             # and defer if we do not have rhs
             return unless defined $_rhs;
@@ -74,9 +76,12 @@ class Machine {
 
             # and reset the state variables
             ($_lhs, $_rhs) = (undef, undef);
+            say "BINOP LHS NQ";
         });
 
         $rhs->WATCH(sub ($c) {
+            say "BINOP RHS $c";
+
             state $last;
             return if defined $last && $last eq $c->storage->hash;
             $last = $c->storage->hash;
@@ -85,6 +90,7 @@ class Machine {
             return if defined $_rhs && $_rhs->hash eq $c->storage->hash;
             # update the _rhs
             $_rhs = $c->GET;
+            say "BINOP RHS UPDATE";
 
             # and defer if we do not have lhs
             return unless defined $_lhs;
@@ -99,6 +105,7 @@ class Machine {
 
             # and reset the state variables
             ($_lhs, $_rhs) = (undef, undef);
+            say "BINOP RHS NQ";
         });
     }
 
