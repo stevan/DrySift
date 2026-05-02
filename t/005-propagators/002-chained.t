@@ -18,8 +18,22 @@ my $output = $alloc->Scalar( $alloc->Str("") );
 my %stats;
 
 $machine->connect_unary(
+    $upper->deref,
+    sub ($str) {
+        $stats{toLower}++;
+        #say "uc => lc : ".$str->value;
+        $alloc->Str( lc $str->value )
+    },
+    $lower->deref
+);
+
+$machine->connect_unary(
     $lower->deref,
-    sub ($str) { $stats{toUpper}++; $alloc->Str( uc $str->value ) },
+    sub ($str) {
+        $stats{toUpper}++;
+        #say "lc => uc : ".$str->value;
+        $alloc->Str( uc $str->value )
+    },
     $upper->deref
 );
 
@@ -32,12 +46,6 @@ $machine->connect_binary(
         $alloc->Str( $n->value . $m->value )
     },
     $output->deref
-);
-
-$machine->connect_unary(
-    $upper->deref,
-    sub ($str) { $stats{toLower}++; $alloc->Str( lc $str->value ) },
-    $lower->deref
 );
 
 $upper->deref->SET( $alloc->Str("HELLO") );
@@ -54,6 +62,7 @@ is($lower->deref->GET->value, 'goodbye', '... got the expected lower value');
 is($upper->deref->GET->value, 'GOODBYE', '... got the expected upper value');
 is($output->deref->GET->value, 'GOODBYEgoodbye', '... got the expected concat value');
 
+# these should not do anything
 $lower->deref->SET( $alloc->Str("goodbye") );
 $upper->deref->SET( $alloc->Str("GOODBYE") );
 

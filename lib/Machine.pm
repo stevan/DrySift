@@ -39,7 +39,7 @@ class Machine {
             return if defined $last && $last eq $c->storage->hash;
             $last = $c->storage->hash;
             # push it ...
-            push @$queue => Opcode::UNOP->new(
+            unshift @$queue => Opcode::UNOP->new(
                 input  => $c->GET,
                 output => $output,
                 action => $action
@@ -65,7 +65,7 @@ class Machine {
             return unless defined $_rhs;
 
             # if we are here, we want to fire ...
-            push @$queue => Opcode::BINOP->new(
+            unshift @$queue => Opcode::BINOP->new(
                 lhs    => $_lhs,
                 rhs    => $_rhs,
                 output => $output,
@@ -90,7 +90,7 @@ class Machine {
             return unless defined $_lhs;
 
             # if we are here, we want to fire ...
-            push @$queue => Opcode::BINOP->new(
+            unshift @$queue => Opcode::BINOP->new(
                 lhs    => $_lhs,
                 rhs    => $_rhs,
                 output => $output,
