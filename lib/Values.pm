@@ -7,7 +7,7 @@ class Cell {
 
     field $uuid    :param :reader;
     field $alloc   :param :reader;
-    field $storage :param;
+    field $storage :param :reader;
 
     field @history  :reader(HISTORY);
     field @watchers :reader(WATCHERS);
