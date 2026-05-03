@@ -34,3 +34,10 @@ class Machine::Opcode::BINOP :isa(Machine::Opcode) {
     field $output :param :reader;
     field $action :param :reader;
 }
+
+class Machine::Opcode::COND :isa(Machine::Opcode) {
+    field $cond     :param :reader;
+    field $input    :param :reader;
+    field $if_true  :param :reader;
+    field $if_false :param :reader;
+}

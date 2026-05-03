@@ -42,7 +42,10 @@ class Literal :isa(Term) {
 class Nil  :isa(Literal) { method is_nil { true } }
 class Num  :isa(Literal) {}
 class Str  :isa(Literal) {}
-class Bool :isa(Literal) {}
+class Bool :isa(Literal) {
+    method is_true  { $self->value eq '#T' }
+    method is_false { $self->value eq '#F' }
+}
 class Sym  :isa(Literal) {}
 
 class Ref :isa(Term) {

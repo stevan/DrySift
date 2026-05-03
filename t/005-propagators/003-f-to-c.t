@@ -93,20 +93,20 @@ $machine->connect( @to_F );
 $F->SET( $alloc->Num(212) );
 $machine->execute;
 
-say ">>> F        : ", $F->GET;
-say ">>> (f - 32) : ", $_f_32->GET;
-say ">>> (c * 9)  : ", $_c_9->GET;
-say ">>> C        : ", $C->GET;
+# say ">>> F        : ", $F->GET;
+# say ">>> (f - 32) : ", $_f_32->GET;
+# say ">>> (c * 9)  : ", $_c_9->GET;
+# say ">>> C        : ", $C->GET;
 
 is($C->GET->value, 100, '... got the right C');
 
 $C->SET( $alloc->Num(0) );
 $machine->execute;
 
-say ">>> F        : ", $F->GET;
-say ">>> (f - 32) : ", $_f_32->GET;
-say ">>> (c * 9)  : ", $_c_9->GET;
-say ">>> C        : ", $C->GET;
+# say ">>> F        : ", $F->GET;
+# say ">>> (f - 32) : ", $_f_32->GET;
+# say ">>> (c * 9)  : ", $_c_9->GET;
+# say ">>> C        : ", $C->GET;
 
 is($F->GET->value, 32, '... got the right F');
 
@@ -114,21 +114,21 @@ $F->SET( $alloc->Num(77) );
 $C->SET( $alloc->Num(25) );
 $machine->execute;
 
-say ">>> F        : ", $F->GET;
-say ">>> (f - 32) : ", $_f_32->GET;
-say ">>> (c * 9)  : ", $_c_9->GET;
-say ">>> C        : ", $C->GET;
+# say ">>> F        : ", $F->GET;
+# say ">>> (f - 32) : ", $_f_32->GET;
+# say ">>> (c * 9)  : ", $_c_9->GET;
+# say ">>> C        : ", $C->GET;
 
 is($C->GET->value, 25, '... got the right C');
 
 $C->SET( $alloc->Num(25) );
 $machine->execute;
 
-diag 'STATS: ', Dumper \%stats;
-diag 'F        : ', join ', ' => $F->HISTORY;
-diag '(f - 32) : ', join ', ' => $_f_32->HISTORY;
-diag '(c * 9)  : ', join ', ' => $_c_9->HISTORY;
-diag 'C        : ', join ', ' => $C->HISTORY;
+#diag 'STATS: ', Dumper \%stats;
+#diag 'F        : ', join ', ' => $F->HISTORY;
+#diag '(f - 32) : ', join ', ' => $_f_32->HISTORY;
+#diag '(c * 9)  : ', join ', ' => $_c_9->HISTORY;
+#diag 'C        : ', join ', ' => $C->HISTORY;
 
 done_testing;
 

@@ -38,6 +38,14 @@ class Machine {
                         push @$queue => Machine::Opcode::ERROR->new( error => $e );
                     }
                 }
+                when ('COND') {
+                    my $cond = $work->cond;
+                    if ($cond isa Bool && $cond->is_true) {
+                        $work->if_true->SET( $work->input );
+                    } else {
+                        $work->if_false->SET( $work->input );
+                    }
+                }
                 default {
                     push @$queue => Machine::Opcode::ERROR->new( error => "Unknown Opcode (${work})" );
                 }

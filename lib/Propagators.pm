@@ -4,7 +4,59 @@ use experimental qw[ class switch ];
 
 use Machine::Opcodes;
 
-class Propagator {}
+class Propagator {
+
+    method _is_new_value ($p, $c) {
+        defined $p && $p->hash eq $c->storage->hash;
+    }
+}
+
+class SwitchPropagator :isa(Propagator) {
+    field $control  :param :reader;
+    field $input    :param :reader;
+    field $if_true  :param :reader;
+    field $if_false :param :reader;
+
+    field $_control;
+    field $_input;
+
+
+    ADJUST {
+        $_control = $control if $control isa Term;
+        $_input   = $input   if $input   isa Term;
+    }
+
+    method _reset_state {
+        $_control = undef if $_control isa Cell;
+        $_input   = undef if $_input   isa Cell;
+    }
+
+    method _trigger_action ($m) {
+        $m->enqueue(
+            Machine::Opcode::COND->new(
+                cond     => $_control,
+                input    => $_input,
+                if_true  => $if_true,
+                if_false => $if_false
+            )
+        );
+        $self->_reset_state;
+    }
+
+    method connect ($m) {
+        $control->WATCH(sub ($c) {
+            return if $self->_is_new_value( $_control, $c );
+            $_control = $c->GET;
+            $self->_trigger_action($m) if defined $_input;
+        }) if $control isa Cell;
+
+        $input->WATCH(sub ($c) {
+            return if $self->_is_new_value( $_input, $c );
+            $_input = $c->GET;
+            $self->_trigger_action($m) if defined $_control;
+        }) if $input isa Cell;
+    }
+}
 
 class UnaryPropagator :isa(Propagator) {
     field $input  :param :reader;
@@ -30,10 +82,6 @@ class UnaryPropagator :isa(Propagator) {
             )
         );
         $self->_reset_state;
-    }
-
-    method _is_new_value ($p, $c) {
-        defined $p && $p->hash eq $c->storage->hash;
     }
 
     method connect ($m) {
@@ -78,10 +126,6 @@ class BinaryPropagator :isa(Propagator) {
             )
         );
         $self->_reset_state;
-    }
-
-    method _is_new_value ($p, $c) {
-        defined $p && $p->hash eq $c->storage->hash;
     }
 
     method connect ($m) {

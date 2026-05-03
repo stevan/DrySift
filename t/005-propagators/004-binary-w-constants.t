@@ -34,7 +34,7 @@ $machine->execute;
 
 is($output->GET->value, 30, '... got the expected value');
 
-diag Dumper \%stats;
+#diag Dumper \%stats;
 
 done_testing;
 
