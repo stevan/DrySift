@@ -26,7 +26,7 @@ my @to_C = (
         rhs    => $alloc->Num(32),
         action => sub ($n, $m) {
             $stats{'f - 32'}++;
-            say "HEY $n - 32";
+            say "F->C @ 1. $n - $m";
             $alloc->Num( $n->value - $m->value )
         },
         output => $_f_32
@@ -36,7 +36,7 @@ my @to_C = (
         rhs    => $alloc->Num(5),
         action => sub ($n, $m) {
             $stats{'(f - 32) * 5'}++;
-            say "HEY $n * 5";
+            say "F->C @ 2. $n * $m";
             $alloc->Num( $n->value * $m->value )
         },
         output => $_c_9
@@ -46,7 +46,7 @@ my @to_C = (
         rhs    => $alloc->Num(9),
         action => sub ($n, $m) {
             $stats{'(f - 32) * 5 / 9'}++;
-            say "HEY $n / 9";
+            say "F->C @ 3. $n / $m";
             $alloc->Num( $n->value / $m->value )
         },
         output => $C
@@ -60,7 +60,7 @@ my @to_F = (
         rhs    => $alloc->Num(9),
         action => sub ($n, $m) {
             $stats{'C * 9'}++;
-            say "HO $n * 9";
+            say "C->F @ 1. $n * $m";
             $alloc->Num( $n->value * $m->value )
         },
         output => $_c_9
@@ -70,7 +70,7 @@ my @to_F = (
         rhs    => $alloc->Num(5),
         action => sub ($n, $m) {
             $stats{'C * 5 / 9'}++;
-            say "HO $n + 32";
+            say "C->F @ 2. $n + $m";
             $alloc->Num( $n->value / $m->value )
         },
         output => $_f_32
@@ -80,7 +80,7 @@ my @to_F = (
         rhs    => $alloc->Num(32),
         action => sub ($n, $m) {
             $stats{'C * 9 / 5 + 32'}++;
-            say "HO $n / 5";
+            say "C->F @ 3. $n / $m";
             $alloc->Num( $n->value + $m->value )
         },
         output => $F,
