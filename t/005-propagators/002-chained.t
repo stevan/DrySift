@@ -17,35 +17,35 @@ my $output = $alloc->Scalar( $alloc->Nil )->deref;
 
 my %stats;
 
-$machine->connect_unary(
-    $upper,
-    sub ($str) {
-        $stats{toLower}++;
-        #say "uc => lc : ".$str->value;
-        $alloc->Str( lc $str->value )
-    },
-    $lower
-);
-
-$machine->connect_unary(
-    $lower,
-    sub ($str) {
-        $stats{toUpper}++;
-        #say "lc => uc : ".$str->value;
-        $alloc->Str( uc $str->value )
-    },
-    $upper
-);
-
-$machine->connect_binary(
-    $upper,
-    $lower,
-    sub ($n, $m) {
-        $stats{concat}++;
-        #say "YO! -->>> ", $n->value . $m->value;
-        $alloc->Str( $n->value . $m->value )
-    },
-    $output
+$machine->connect(
+    UnaryPropagator->new(
+        input  => $upper,
+        action => sub ($str) {
+            $stats{toLower}++;
+            #say "uc => lc : ".$str->value;
+            $alloc->Str( lc $str->value )
+        },
+        output => $lower
+    ),
+    UnaryPropagator->new(
+        input  => $lower,
+        action => sub ($str) {
+            $stats{toUpper}++;
+            #say "lc => uc : ".$str->value;
+            $alloc->Str( uc $str->value )
+        },
+        output => $upper
+    ),
+    BinaryPropagator->new(
+        lhs    => $upper,
+        rhs    => $lower,
+        action => sub ($n, $m) {
+            $stats{concat}++;
+            #say "YO! -->>> ", $n->value . $m->value;
+            $alloc->Str( $n->value . $m->value )
+        },
+        output => $output
+    )
 );
 
 $upper->SET( $alloc->Str("HELLO") );

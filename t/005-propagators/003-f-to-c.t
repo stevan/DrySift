@@ -20,69 +20,69 @@ my $_c_9  = $alloc->Scalar( $alloc->Nil )->deref;
 my %stats;
 
 # c = (f - 32) * 5 / 9
-
-$machine->connect_unary(
-    $F,
-    sub ($n) {
-        $stats{'f - 32'}++;
-        say "HEY $n - 32";
-        $alloc->Num( $n->value - 32 )
-    },
-    $_f_32
-);
-
-$machine->connect_unary(
-    $_f_32,
-    sub ($n) {
-        $stats{'(f - 32) * 5'}++;
-        say "HEY $n * 5";
-        $alloc->Num( $n->value * 5 )
-    },
-    $_c_9
-);
-
-$machine->connect_unary(
-    $_c_9,
-    sub ($n) {
-        $stats{'(f - 32) * 5 / 9'}++;
-        say "HEY $n / 9";
-        $alloc->Num( $n->value / 9 )
-    },
-    $C
+my @to_C = (
+    UnaryPropagator->new(
+        input  => $F,
+        action => sub ($n) {
+            $stats{'f - 32'}++;
+            say "HEY $n - 32";
+            $alloc->Num( $n->value - 32 )
+        },
+        output => $_f_32
+    ),
+    UnaryPropagator->new(
+        input  => $_f_32,
+        action => sub ($n) {
+            $stats{'(f - 32) * 5'}++;
+            say "HEY $n * 5";
+            $alloc->Num( $n->value * 5 )
+        },
+        output => $_c_9
+    ),
+    UnaryPropagator->new(
+        input  => $_c_9,
+        action => sub ($n) {
+            $stats{'(f - 32) * 5 / 9'}++;
+            say "HEY $n / 9";
+            $alloc->Num( $n->value / 9 )
+        },
+        output => $C
+    )
 );
 
 # f = c * 5 / 9 + 32
-
-$machine->connect_unary(
-    $C,
-    sub ($n) {
-        $stats{'C * 9'}++;
-        say "HO $n * 9";
-        $alloc->Num( $n->value * 9 )
-    },
-    $_c_9
+my @to_F = (
+    UnaryPropagator->new(
+        input  => $C,
+        action => sub ($n) {
+            $stats{'C * 9'}++;
+            say "HO $n * 9";
+            $alloc->Num( $n->value * 9 )
+        },
+        output => $_c_9
+    ),
+    UnaryPropagator->new(
+        input  => $_c_9,
+        action => sub ($n) {
+            $stats{'C * 5 / 9'}++;
+            say "HO $n + 32";
+            $alloc->Num( $n->value / 5 )
+        },
+        output => $_f_32
+    ),
+    UnaryPropagator->new(
+        input  => $_f_32,
+        action => sub ($n) {
+            $stats{'C * 9 / 5 + 32'}++;
+            say "HO $n / 5";
+            $alloc->Num( $n->value + 32 )
+        },
+        output => $F,
+    )
 );
 
-$machine->connect_unary(
-    $_c_9,
-    sub ($n) {
-        $stats{'C * 5 / 9'}++;
-        say "HO $n + 32";
-        $alloc->Num( $n->value / 5 )
-    },
-    $_f_32
-);
-
-$machine->connect_unary(
-    $_f_32,
-    sub ($n) {
-        $stats{'C * 9 / 5 + 32'}++;
-        say "HO $n / 5";
-        $alloc->Num( $n->value + 32 )
-    },
-    $F,
-);
-
+$machine->connect( @to_C );
+$machine->connect( @to_F );
 
 $F->SET( $alloc->Num(212) );
 $machine->execute;
