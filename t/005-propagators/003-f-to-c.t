@@ -21,30 +21,33 @@ my %stats;
 
 # c = (f - 32) * 5 / 9
 my @to_C = (
-    UnaryPropagator->new(
-        input  => $F,
-        action => sub ($n) {
+    BinaryPropagator->new(
+        lhs    => $F,
+        rhs    => $alloc->Num(32),
+        action => sub ($n, $m) {
             $stats{'f - 32'}++;
             say "HEY $n - 32";
-            $alloc->Num( $n->value - 32 )
+            $alloc->Num( $n->value - $m->value )
         },
         output => $_f_32
     ),
-    UnaryPropagator->new(
-        input  => $_f_32,
-        action => sub ($n) {
+    BinaryPropagator->new(
+        lhs    => $_f_32,
+        rhs    => $alloc->Num(5),
+        action => sub ($n, $m) {
             $stats{'(f - 32) * 5'}++;
             say "HEY $n * 5";
-            $alloc->Num( $n->value * 5 )
+            $alloc->Num( $n->value * $m->value )
         },
         output => $_c_9
     ),
-    UnaryPropagator->new(
-        input  => $_c_9,
-        action => sub ($n) {
+    BinaryPropagator->new(
+        lhs    => $_c_9,
+        rhs    => $alloc->Num(9),
+        action => sub ($n, $m) {
             $stats{'(f - 32) * 5 / 9'}++;
             say "HEY $n / 9";
-            $alloc->Num( $n->value / 9 )
+            $alloc->Num( $n->value / $m->value )
         },
         output => $C
     )
@@ -52,30 +55,33 @@ my @to_C = (
 
 # f = c * 5 / 9 + 32
 my @to_F = (
-    UnaryPropagator->new(
-        input  => $C,
-        action => sub ($n) {
+    BinaryPropagator->new(
+        lhs    => $C,
+        rhs    => $alloc->Num(9),
+        action => sub ($n, $m) {
             $stats{'C * 9'}++;
             say "HO $n * 9";
-            $alloc->Num( $n->value * 9 )
+            $alloc->Num( $n->value * $m->value )
         },
         output => $_c_9
     ),
-    UnaryPropagator->new(
-        input  => $_c_9,
-        action => sub ($n) {
+    BinaryPropagator->new(
+        lhs    => $_c_9,
+        rhs    => $alloc->Num(5),
+        action => sub ($n, $m) {
             $stats{'C * 5 / 9'}++;
             say "HO $n + 32";
-            $alloc->Num( $n->value / 5 )
+            $alloc->Num( $n->value / $m->value )
         },
         output => $_f_32
     ),
-    UnaryPropagator->new(
-        input  => $_f_32,
-        action => sub ($n) {
+    BinaryPropagator->new(
+        lhs    => $_f_32,
+        rhs    => $alloc->Num(32),
+        action => sub ($n, $m) {
             $stats{'C * 9 / 5 + 32'}++;
             say "HO $n / 5";
-            $alloc->Num( $n->value + 32 )
+            $alloc->Num( $n->value + $m->value )
         },
         output => $F,
     )

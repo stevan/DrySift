@@ -13,8 +13,12 @@ class UnaryPropagator :isa(Propagator) {
 
     field $_in;
 
+    ADJUST {
+        $_in = $input if $input isa Term;
+    }
+
     method _reset_state {
-        ($_in) = (undef);
+        $_in = undef if $input isa Cell;
     }
 
     method _trigger_action ($m) {
@@ -33,11 +37,15 @@ class UnaryPropagator :isa(Propagator) {
     }
 
     method connect ($m) {
-        $input->WATCH(sub ($c) {
-            return if $self->_is_new_value( $_in, $c );
-            $_in = $c->GET;
-            $self->_trigger_action( $m );
-        });
+        if ($input isa Term) {
+            $self->_trigger_action($m);
+        } else {
+            $input->WATCH(sub ($c) {
+                return if $self->_is_new_value( $_in, $c );
+                $_in = $c->GET;
+                $self->_trigger_action( $m );
+            });
+        }
     }
 }
 
@@ -50,8 +58,14 @@ class BinaryPropagator :isa(Propagator) {
     field $_lhs;
     field $_rhs;
 
+    ADJUST {
+        $_lhs = $lhs if $lhs isa Term;
+        $_rhs = $rhs if $rhs isa Term;
+    }
+
     method _reset_state {
-        ($_lhs, $_rhs) = (undef, undef);
+        $_lhs = undef if $lhs isa Cell;
+        $_rhs = undef if $rhs isa Cell;
     }
 
     method _trigger_action ($m) {
@@ -71,16 +85,21 @@ class BinaryPropagator :isa(Propagator) {
     }
 
     method connect ($m) {
-        $lhs->WATCH(sub ($c) {
-            return if $self->_is_new_value( $_lhs, $c );
-            $_lhs = $c->GET;
-            $self->_trigger_action( $m ) if defined $_rhs;
-        });
+        if ($lhs isa Term && $rhs isa Term) {
+            $self->_trigger_action( $m );
+        }
+        else {
+            $lhs->WATCH(sub ($c) {
+                return if $self->_is_new_value( $_lhs, $c );
+                $_lhs = $c->GET;
+                $self->_trigger_action( $m ) if defined $_rhs;
+            }) if $lhs isa Cell;
 
-        $rhs->WATCH(sub ($c) {
-            return if $self->_is_new_value( $_rhs, $c );
-            $_rhs = $c->GET;
-            $self->_trigger_action( $m ) if defined $_lhs;
-        });
+            $rhs->WATCH(sub ($c) {
+                return if $self->_is_new_value( $_rhs, $c );
+                $_rhs = $c->GET;
+                $self->_trigger_action( $m ) if defined $_lhs;
+            }) if $rhs isa Cell;
+        }
     }
 }
