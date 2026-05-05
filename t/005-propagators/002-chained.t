@@ -66,7 +66,7 @@ is($output->GET->value, 'GOODBYEgoodbye', '... got the expected concat value');
 $lower->SET( $alloc->Str("goodbye") );
 $upper->SET( $alloc->Str("GOODBYE") );
 
-is_deeply(\%stats, { toLower => 2, toUpper => 2, concat => 2 }, '... expected stats');
+is_deeply(\%stats, { toLower => 2, toUpper => 2, concat => 3 }, '... expected stats');
 
 #diag 'STATS: ', Dumper \%stats;
 #diag 'UPPER: ', join ', '  => $upper->HISTORY;

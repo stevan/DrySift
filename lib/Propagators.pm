@@ -4,146 +4,137 @@ use experimental qw[ class switch ];
 
 use Machine::Opcodes;
 
-class Propagator {
+## -----------------------------------------------------------------------------
+## Propagators
+## -----------------------------------------------------------------------------
 
-    method _is_new_value ($p, $c) {
-        defined $p && $p->hash eq $c->storage->hash;
-    }
-}
-
-class SwitchPropagator :isa(Propagator) {
-    field $control  :param :reader;
-    field $input    :param :reader;
-    field $if_true  :param :reader;
-    field $if_false :param :reader;
-
-    field $_control;
-    field $_input;
-
+class UnaryPropagator {
+    field $input   :param :reader;
+    field $output  :param :reader;
+    field $action  :param :reader;
+    field $watcher :param :reader = undef;
 
     ADJUST {
-        $_control = $control if $control isa Term;
-        $_input   = $input   if $input   isa Term;
-    }
-
-    method _reset_state {
-        $_control = undef if $_control isa Cell;
-        $_input   = undef if $_input   isa Cell;
-    }
-
-    method _trigger_action ($m) {
-        $m->enqueue(
-            Machine::Opcode::COND->new(
-                cond     => $_control,
-                input    => $_input,
-                if_true  => $if_true,
-                if_false => $if_false
-            )
-        );
-        $self->_reset_state;
+        $watcher = UnaryWatcher->new( cell => $input );
     }
 
     method connect ($m) {
-        $control->WATCH(sub ($c) {
-            return if $self->_is_new_value( $_control, $c );
-            $_control = $c->GET;
-            $self->_trigger_action($m) if defined $_input;
-        }) if $control isa Cell;
-
-        $input->WATCH(sub ($c) {
-            return if $self->_is_new_value( $_input, $c );
-            $_input = $c->GET;
-            $self->_trigger_action($m) if defined $_control;
-        }) if $input isa Cell;
-    }
-}
-
-class UnaryPropagator :isa(Propagator) {
-    field $input  :param :reader;
-    field $output :param :reader;
-    field $action :param :reader;
-
-    field $_in;
-
-    ADJUST {
-        $_in = $input if $input isa Term;
+        $watcher->watch( $m, $self );
     }
 
-    method _reset_state {
-        $_in = undef if $input isa Cell;
-    }
-
-    method _trigger_action ($m) {
-        $m->enqueue(
+    method execute ($machine, $cell) {
+        $machine->enqueue(
             Machine::Opcode::UNOP->new(
-                input  => $_in,
+                input  => $cell,
                 output => $output,
                 action => $action
             )
-        );
-        $self->_reset_state;
-    }
-
-    method connect ($m) {
-        if ($input isa Term) {
-            $self->_trigger_action($m);
-        } else {
-            $input->WATCH(sub ($c) {
-                return if $self->_is_new_value( $_in, $c );
-                $_in = $c->GET;
-                $self->_trigger_action( $m );
-            });
-        }
+        )
     }
 }
 
-class BinaryPropagator :isa(Propagator) {
+class BinaryPropagator {
     field $lhs    :param :reader;
     field $rhs    :param :reader;
     field $output :param :reader;
     field $action :param :reader;
-
-    field $_lhs;
-    field $_rhs;
+    field $watcher :param :reader = undef;
 
     ADJUST {
-        $_lhs = $lhs if $lhs isa Term;
-        $_rhs = $rhs if $rhs isa Term;
-    }
-
-    method _reset_state {
-        $_lhs = undef if $lhs isa Cell;
-        $_rhs = undef if $rhs isa Cell;
-    }
-
-    method _trigger_action ($m) {
-        $m->enqueue(
-            Machine::Opcode::BINOP->new(
-                lhs    => $_lhs,
-                rhs    => $_rhs,
-                output => $output,
-                action => $action
-            )
-        );
-        $self->_reset_state;
+        $watcher = BinaryWatcher->new( lhs => $lhs, rhs => $rhs );
     }
 
     method connect ($m) {
-        if ($lhs isa Term && $rhs isa Term) {
-            $self->_trigger_action( $m );
+        $watcher->watch( $m, $self );
+    }
+
+    method execute ($machine, $n, $m) {
+        $machine->enqueue(
+            Machine::Opcode::BINOP->new(
+                lhs    => $n,
+                rhs    => $m,
+                output => $output,
+                action => $action
+            )
+        )
+    }
+}
+
+class SwitchPropagator {
+    field $control  :param :reader;
+    field $input    :param :reader;
+    field $if_true  :param :reader;
+    field $if_false :param :reader;
+    field $watcher  :param :reader = undef;
+
+    ADJUST {
+        $watcher = BinaryWatcher->new( lhs => $control, rhs => $input );
+    }
+
+    method connect ($m) {
+        $watcher->watch( $m, $self );
+    }
+
+    method execute ($machine, $c, $i) {
+        $machine->enqueue(
+            Machine::Opcode::COND->new(
+                cond     => $c,
+                input    => $i,
+                if_true  => $if_true,
+                if_false => $if_false
+            )
+        )
+    }
+}
+
+## -----------------------------------------------------------------------------
+## watchers
+## -----------------------------------------------------------------------------
+
+class UnaryWatcher {
+    field $cell :param :reader;
+
+    method watch ($machine, $propagator) {
+        if ($cell isa Term) {
+            $propagator->execute( $machine, $cell );
+        } else {
+            $cell->WATCH( sub ($c) { $propagator->execute( $machine, $c->GET ) } );
+        }
+    }
+}
+
+class BinaryWatcher {
+    field $lhs :param :reader;
+    field $rhs :param :reader;
+
+    field $seen_lhs;
+    field $seen_rhs;
+
+    ADJUST {
+        $seen_lhs = $lhs if $lhs isa Term;
+        $seen_rhs = $rhs if $rhs isa Term;
+    }
+
+    method watch ($machine, $propagator) {
+        if (defined $seen_lhs && defined $seen_rhs) {
+            $propagator->execute( $machine, $seen_lhs, $seen_rhs );
         }
         else {
-            $lhs->WATCH(sub ($c) {
-                return if $self->_is_new_value( $_lhs, $c );
-                $_lhs = $c->GET;
-                $self->_trigger_action( $m ) if defined $_rhs;
-            }) if $lhs isa Cell;
+            if ($lhs isa Cell) {
+                $lhs->WATCH(sub ($c) {
+                    $seen_lhs = $c->GET;
+                    $propagator->execute( $machine, $seen_lhs, $seen_rhs )
+                        if defined $seen_rhs;
+                });
+            }
 
-            $rhs->WATCH(sub ($c) {
-                return if $self->_is_new_value( $_rhs, $c );
-                $_rhs = $c->GET;
-                $self->_trigger_action( $m ) if defined $_lhs;
-            }) if $rhs isa Cell;
+            if ($rhs isa Cell) {
+                $rhs->WATCH(sub ($c) {
+                    $seen_rhs = $c->GET;
+                    $propagator->execute( $machine, $seen_lhs, $seen_rhs )
+                        if defined $seen_lhs;
+                });
+            }
         }
     }
 }
